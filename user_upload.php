@@ -24,8 +24,8 @@ class Users {
 
 	private function buildArgumentsArr ($argc, $argv) {
 		for ($i=0; $i < $argc; $i++) {
+			
 			$argument = $argv[$i];
-			// Only get argument starting with "-"
 			if (substr($argument,0,1)!="-")
 				continue;
 
@@ -56,11 +56,15 @@ class Users {
 	}
 
 	private function doit () {
-		if ($this->argumentsArr["help"] = true) {
+		if ($this->argumentsArr["help"] == true) {
 			$this->help();
 		}
 
-		if ($this->argumentsArr["create_table"] = true) {
+		if($this->argumentsArr["file"]) {
+			$this->parseData();
+		}
+
+		if ($this->argumentsArr["create_table"] == true) {
 			$this->createTable();
 		}	
 	}
@@ -76,7 +80,72 @@ class Users {
 		exit(-1);
 	}
 
+	private function parseData () {
+
+		$usersArr = array();
+		$fields = array(); 
+		
+		$file = fopen($this->argumentsArr["file"], "r");
+	    if ($file) {
+	    	$i = 0;
+		    while ($row = fgetcsv($file)) {
+		        if (empty($fields)) {
+		            $fields = $row;
+		            continue;
+		        }
+		        
+		        if(count($row)==3) { // must have name, surname, email
+		        	foreach ($row as $k=>$value) {
+			            $usersArr[$i][trim($fields[$k])] = $value;
+			        }
+			        $i++;
+		        }
+		        
+		    }
+		    if (!feof($file)) {
+		        echo "Error: unexpected fgets() fail\n";
+		    }
+		    fclose($file);
+
+		    var_dump($usersArr);
+		    return $usersArr;
+		}
+	}
+
 	private function createTable() {
+		$conn = $this->connectDB();		
+		$query = "DROP TABLE IF EXISTS users;
+				CREATE TABLE users (
+	            id SERIAL PRIMARY KEY,
+	            name VARCHAR(100) NOT NULL,
+	            surname VARCHAR(100) NOT NULL,
+	            email VARCHAR(255) UNIQUE);";
+	    pg_query($conn, $query);
+	}
+
+
+
+	private function connectDB () {
+		/*
+		$db_host = $this->argumentsArray["h"];
+		$db_user = $this->argumentsArray["u"];
+		$db_password = $this->argumentsArray["p"];
+		*/
+
+		$db_host = "localhost";
+		$db_name = "postgres";
+		$db_user = "postgres";
+		$db_password = 123456;
+		
+		$db_handle = pg_pconnect("host=$db_host dbname=$db_name user=$db_user password=$db_password");
+
+		if ($db_handle) {
+			echo 'Connection attempt succeeded.';
+			return $db_handle;
+		} else {
+			echo 'Connection attempt failed.';
+		}
+
 
 	}
 }
