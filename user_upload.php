@@ -61,11 +61,25 @@ class Users {
 		}
 
 		if($this->argumentsArr["file"]) {
-			$this->parseData();
+			$usersArr = $this->parseData();
+			if ($this->argumentsArr["h"]==false || $this->argumentsArr["u"]==false  || $this->argumentsArr["p"]==false){
+				echo "please input the arguments [-u], [-h], [-p]\n";
+				$this->help();
+			}
+			else {
+				$this->insertUsers($usersArr);
+			}
 		}
 
 		if ($this->argumentsArr["create_table"] == true) {
-			$this->createTable();
+			if ($this->argumentsArr["h"]==false || $this->argumentsArr["u"]==false || $this->argumentsArr["p"]==false){
+				echo "please input the arguments [-u], [-h], [-p]\n";
+				$this->help();
+			}else {
+				$this->createTable();
+				exit(1);
+			}
+			
 		}	
 	}
 
@@ -77,6 +91,7 @@ class Users {
 		echo "-p – PostgreSQL password.\n";
 		echo "-h – PostgreSQL host.\n";
 		echo "--help – which will output the above list of directives with details.\n";
+		$this->getUsers();
 		exit(-1);
 	}
 
@@ -140,13 +155,63 @@ class Users {
 		$db_handle = pg_pconnect("host=$db_host dbname=$db_name user=$db_user password=$db_password");
 
 		if ($db_handle) {
-			echo 'Connection attempt succeeded.';
+			//echo 'Connection attempt succeeded.';
 			return $db_handle;
 		} else {
-			echo 'Connection attempt failed.';
+			//echo 'Connection attempt failed.';
 		}
+	}
 
+	private function insertUsers ($usersArr) {
+		echo "\n INSERT \n";
+		$conn = $this->connectDB();	
+		foreach($usersArr as $user) {
+			$name = ucfirst($this->cleanText($user["name"]));
+			$surname = ucfirst($this->cleanText($user["surname"]));
+			$email =  $this->cleanText($user["email"]);
+			if($this->validateEmail($email)) {
+				echo "validated email:".$name.",".$surname.",",$email."\n";
+				//if ($isRunInsertDB){
+				if (1==1){
+					$sql = "INSERT INTO users (name, surname, email)
+							VALUES ('$name','$surname','$email');";
+					echo "sql ".$sql."\n";
+					$result = pg_query($conn, $sql);
+					if (!$result){
+						echo "insert a row failed:".$name.",".$surname.",".$email."\n";
+					}
+					else {
+						echo "INSERTED.".$name.",".$surname.",".$email."\n";
+					}
+				}
+			}
+			else {
+				echo "invalid email:".$name.",".$surname.",",$email."\n";
+			}	
+		}
+	}
 
+	private function getUsers() {
+		echo "USERS.\n"; 
+		$conn = $this->connectDB();	
+		$sql = "SELECT * FROM users";
+		$result = pg_query($conn, $sql);
+		while($row = pg_fetch_array($result)){
+		 $k = $row['name']." ".$row['surname']." ".$row['email']; 
+
+		 echo $k."\n"; 
+		}
+	}
+
+	private function cleanText ($text) {
+		return strtolower(trim(str_replace("'","''", $text)));
+	}
+
+	private function validateEmail ($email) {
+		if (preg_match('/^([0-9a-zA-Z]([-!\.\w]*[0-9a-zA-Z][\'\!]*)*@([0-9a-zA-Z][-\w]*[0-9a-zA-Z]\.)+[a-zA-Z]{2,9})$/i', $email)) 
+    		return true;
+		else
+			return false;
 	}
 }
 
