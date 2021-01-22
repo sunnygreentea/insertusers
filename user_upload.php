@@ -1,12 +1,13 @@
 <?php
 
 //------------------------------------------------------------------------
-//  This code is executed from the command line, which accepts a CSV file as input and processes the CSV file, the parsed file data is inserted into  a PostgreSQL database.
+//  This code is executed from the command line.
+// The script create a table in a PostgreSQL database, reads a CSV file, parses data and insert data into the table.
 //------------------------------------------------------------------------
 
 class Users {
 
-	// Assume database name is "postgres"
+	// NOTE: since database name is not provided from command line, here let's assume database name is "postgres"
 	// To run the code correctly, this may be changed
 	private $db_name = "postgres";
 
@@ -71,6 +72,10 @@ class Users {
 				case "--help":
 					$this->argumentsArr["help"] = true;
 					break;
+				default:
+					echo "Error with options\n";
+					$this->argumentsArr["help"] = true;
+					break;
 			}
 		}
 	}
@@ -84,6 +89,7 @@ class Users {
 		// If the input argument contains "--help", show help list info
 		if ($this->argumentsArr["help"] == true) {
 			$this->help();
+			exit(1);
 		}
 
 		// Create table --create_table
@@ -94,8 +100,9 @@ class Users {
 				$this->createTable();
 				exit(1);
 			}else {
-				echo "please input the arguments [-u], [-h], [-p]\n";
+				echo "please input the arguments [-h], [-u], [-p]\n";
 				$this->help();
+				exit(1);
 			}
 		}	
 
@@ -106,10 +113,12 @@ class Users {
 			if($this->argumentsArr["file"]) {
 				// Passing argument "false" to indicate NOT insert into database
 				$this->parseAndInsert(false);
+				exit(1);
 			}
 			else {
-				echo "please input the arguments [--file]\n";
+				echo "Please input the arguments [--file]\n";
 				$this->help();
+				exit(1);
 			}
 		}
 
@@ -118,6 +127,7 @@ class Users {
 		if($this->argumentsArr["file"] && $this->argumentsArr["dry_run"] == false) {
 			// Passing argument "true" to indicate YES insert into database
 			$this->parseAndInsert(true);
+			exit(1);
 		}
 		
 	}
@@ -138,7 +148,7 @@ class Users {
 		}
 		// else show help info
 		else {
-			echo "please input the arguments [-u], [-h], [-p]\n";
+			echo "Please input the arguments [-h], [-u], [-p]\n";
 			$this->help();
 		}
 	}
@@ -155,7 +165,6 @@ class Users {
 		echo "-h – PostgreSQL host.\n";
 		echo "--help – which will output the above list of directives with details.\n";
 		
-		exit(-1);
 	}
 
 
@@ -225,22 +234,17 @@ class Users {
 	// Connect to database
 	//-----------------------------------------------------------------
 	private function connectDB () {
-		/*
-		$db_host = $this->argumentsArray["h"];
-		$db_user = $this->argumentsArray["u"];
-		$db_password = $this->argumentsArray["p"];
-		*/
-
-		$db_host = "localhost";
-		$db_name = "postgres";
-		$db_user = "postgres";
-		$db_password = 123456;
 		
-		$db_handle = pg_pconnect("host=$db_host dbname=$db_name user=$db_user password=$db_password");
+		$db_host = $this->argumentsArr["h"];
+		$db_user = $this->argumentsArr["u"];
+		$db_password = $this->argumentsArr["p"];
+		
+		$db_handle = pg_pconnect("host=$db_host dbname=$this->db_name user=$db_user password=$db_password");
 
 		if ($db_handle) {
 			return $db_handle;
 		} else {
+			echo "Failed to connect database.\n";
 		}
 	}
 
@@ -285,7 +289,7 @@ class Users {
 		$sql = "SELECT * FROM users";
 		$result = pg_query($conn, $sql);
 		if(pg_num_rows($result)>0) {
-			echo "\n\nAll users:\n"; 
+			echo "\n\nAll users in the table:\n"; 
 			while($row = pg_fetch_array($result)){
 				$k = $row['name']." ".$row['surname']." ".$row['email']; 
 				echo $k."\n"; 
